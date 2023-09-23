@@ -1,0 +1,38 @@
+gcloud init
+git clone https://github.com/GoogleCloudPlatform/php-docs-samples.git
+cd php-docs-samples/appengine/standard/getting-started
+
+composer install
+gcloud sql instances create bookshelf --tier=db-n1-standard-2 --region=us-central1
+gcloud sql users set-password root --host=% --instance=bookshelf --password=passw0rd!
+gcloud sql databases create book-data --instance=bookshelf
+
+#enable billing
+gcloud billing projects link ddtest-ae --billing-account=012F6E-C087E7-821E9F
+gsutil mb -l us-central1 gs://picture-storage-ddugar3/
+
+#app.yaml
+
+runtime: php81
+
+env_variables:
+  GOOGLE_STORAGE_BUCKET: picture-storage-ddugar3
+  CLOUDSQL_CONNECTION_NAME: ddtest-ae:us-central1:bookshelf
+  CLOUDSQL_USER: root
+  CLOUDSQL_PASSWORD: passw0rd!
+  CLOUDSQL_DATABASE_NAME: book-data
+
+
+gcloud app deploy
+gcloud app browse
+
+wget https://dl.google.com/cloudsql/cloud_sql_proxy.linux.amd64 -O cloud_sql_proxy
+chmod +x cloud_sql_proxy
+./cloud_sql_proxy -instances=ddtest-ae:us-central1:bookshelf=tcp:3306
+
+wget https://github.com/datacharmer/test_db/releases/download/v1.0.7/test_db-1.0.7.tar.gz
+tar -xzvf test_db-1.0.7.tar.gz
+cd test_db
+mysql -h 127.0.0.1 -u root -t < employees.sql -p
+
+gcloud projects delete ddtest-ae
